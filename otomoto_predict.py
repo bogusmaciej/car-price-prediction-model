@@ -34,8 +34,6 @@ def predict_price(new_data):
                 return
         else:
             return
-
+    pipeline = load('model/otomoto_price_prediction_model.joblib')
     predictions = pipeline.predict(new_data)
     return predictions
-
-print(predict_price(new_data))

@@ -51,7 +51,15 @@ def create_model():
         ])
 
     train_X, val_X, train_y, val_y = train_test_split(X, y, random_state = 0)
-    model = RandomForestRegressor(n_estimators=100, random_state=42, max_samples=100000, verbose=2, n_jobs=-1)
+    
+    n_estimators = 0
+    max_samples = 0
+    
+    print("MODEL CREATOR")
+    n_estimators = input("n_estimators (e.g. 50): ")
+    max_samples = input("max_samples (e.g. 5000): ")
+    model = RandomForestRegressor(n_estimators=int(n_estimators), random_state=42, max_samples=int(max_samples), verbose=2, n_jobs=-1)
+    
     pipeline = Pipeline(steps=[('preprocessor', preprocessor),
                                 ('model', model)],verbose=2)
 
