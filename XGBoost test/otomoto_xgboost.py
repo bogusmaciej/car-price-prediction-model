@@ -1,13 +1,17 @@
+import os
+import pandas as pd
+from joblib import dump
+
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.metrics import r2_score
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from joblib import dump
-import pandas as pd
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from xgboost import XGBRegressor
+
 from otomoto_create_dataset import create_dataset
-import os
+
 
 
 def create_model():
@@ -32,40 +36,44 @@ def create_model():
                             'vehicle_model', 'units','fuel_type', 'color', 'automatic_air_conditioning',
                             'abs', 'no_accident','automatic_air_conditioning_is_not_set',
                             'no_accident_is_not_set','voivodship']
-    numerical_features = ['production_year', 'mileage']
+    numeric_features = ['production_year', 'mileage']
 
-    categorical_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))
-        ])
-
-    numerical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
+    numeric_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='mean'))
     ])
 
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('encoder', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Kompozycja transformerów
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', numerical_transformer, numerical_features),
+            ('num', numeric_transformer, numeric_features),
             ('cat', categorical_transformer, categorical_features)
         ])
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 0)
 
-    train_X, val_X, train_y, val_y = train_test_split(X, y, random_state = 0)
-    
-    n_estimators = 0
-    max_samples = 0
-    
-    print("MODEL CREATOR")
-    n_estimators = input("n_estimators (e.g. 50): ")
-    max_samples = input("max_samples (e.g. 5000): ")
-    model = RandomForestRegressor(n_estimators=int(n_estimators), random_state=42, max_samples=int(max_samples), verbose=2, n_jobs=-1)
-    
-    pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                                ('model', model)],verbose=2)
+    model =  XGBRegressor(
+        n_estimators=95,
+        max_depth=12,
+        learning_rate=0.4
+    )
 
-    pipeline.fit(train_X, train_y)
-    score = pipeline.score(val_X, val_y)
-    print(f"Model trained, score: {score}")
+    pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('model', model)
+    ])
+
+    pipeline.fit(X_train, y_train)
+
+    predictions  = pipeline.predict(X_test)
+    print("Model created, score:", r2_score(predictions, y_test))
+        
     if not os.path.exists('./model'):
         os.mkdir('./model')
     dump(pipeline, 'model/otomoto_price_prediction_model.joblib')
+
+create_model()
